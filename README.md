@@ -1,41 +1,60 @@
 # Transactions List API with Authentication
 
-A full-featured REST API for managing personal transactions with user authentication, built with FastAPI and SQLAlchemy.
+A full-featured REST API for managing personal transactions with user authentication, built with NestJS, TypeORM, and SQLite.
 
 ## Features
 
-- **User Authentication**: JWT-based authentication system
+- **User Authentication**: JWT-based authentication system with Passport
 - **User Registration & Login**: Secure user account creation and authentication
 - **Transaction Management**: Full CRUD operations for transactions
 - **Transaction Statistics**: Get summary of income, expenses, and balance
 - **User Isolation**: Each user can only access their own transactions
-- **Input Validation**: Pydantic models for request/response validation
-- **Interactive Documentation**: Auto-generated API docs with Swagger UI
+- **Input Validation**: Class-validator for request validation
+- **Type Safety**: Full TypeScript support
+- **RESTful API**: Clean and intuitive API design
 
 ## Tech Stack
 
-- **FastAPI**: Modern web framework for building APIs
-- **SQLAlchemy**: SQL toolkit and ORM
+- **NestJS**: Progressive Node.js framework
+- **TypeORM**: TypeScript ORM for database operations
 - **SQLite**: Lightweight database
+- **Passport**: Authentication middleware
 - **JWT**: JSON Web Tokens for authentication
-- **Passlib & Bcrypt**: Password hashing
-- **Pydantic**: Data validation
+- **Bcrypt**: Password hashing
+- **Class Validator**: Validation decorators
 
 ## Project Structure
 
 ```
-.
-├── main.py                 # Main application entry point
-├── models.py              # Database models (User, Transaction)
-├── schemas.py             # Pydantic schemas for validation
-├── database.py            # Database configuration
-├── auth.py                # Authentication utilities
-├── routers/
-│   ├── __init__.py
-│   ├── auth.py           # Authentication endpoints
-│   └── transactions.py   # Transaction endpoints
-├── requirements.txt       # Python dependencies
-└── README.md             # This file
+src/
+├── auth/
+│   ├── dto/
+│   │   ├── login.dto.ts
+│   │   └── register.dto.ts
+│   ├── guards/
+│   │   ├── jwt-auth.guard.ts
+│   │   └── local-auth.guard.ts
+│   ├── strategies/
+│   │   ├── jwt.strategy.ts
+│   │   └── local.strategy.ts
+│   ├── auth.controller.ts
+│   ├── auth.module.ts
+│   └── auth.service.ts
+├── users/
+│   ├── entities/
+│   │   └── user.entity.ts
+│   └── users.module.ts
+├── transactions/
+│   ├── dto/
+│   │   ├── create-transaction.dto.ts
+│   │   └── update-transaction.dto.ts
+│   ├── entities/
+│   │   └── transaction.entity.ts
+│   ├── transactions.controller.ts
+│   ├── transactions.module.ts
+│   └── transactions.service.ts
+├── app.module.ts
+└── main.ts
 ```
 
 ## Installation
@@ -46,51 +65,76 @@ git clone <repository-url>
 cd test
 ```
 
-2. Create a virtual environment:
+2. Install dependencies:
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+npm install
 ```
 
-3. Install dependencies:
+3. Configure environment variables:
 ```bash
-pip install -r requirements.txt
+cp .env.example .env
+```
+
+Edit `.env` and set your JWT secret:
+```env
+JWT_SECRET=your-super-secret-key-change-this
+PORT=3000
 ```
 
 ## Running the Application
 
-Start the development server:
+### Development mode
 ```bash
-uvicorn main:app --reload
+npm run start:dev
+```
+
+### Production mode
+```bash
+npm run build
+npm run start:prod
 ```
 
 The API will be available at:
-- API: http://localhost:8000
-- Interactive docs (Swagger UI): http://localhost:8000/docs
-- Alternative docs (ReDoc): http://localhost:8000/redoc
+- API Base URL: http://localhost:3000/api
+- Health Check: http://localhost:3000/api
 
 ## API Endpoints
+
+All endpoints are prefixed with `/api`
 
 ### Authentication
 
 #### Register a new user
 ```http
-POST /auth/register
+POST /api/auth/register
 Content-Type: application/json
 
 {
   "email": "user@example.com",
   "username": "johndoe",
-  "password": "securepassword"
+  "password": "securepassword123"
+}
+```
+
+Response:
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "username": "johndoe",
+  "createdAt": "2024-01-01T00:00:00.000Z"
 }
 ```
 
 #### Login
 ```http
-POST /auth/login
-Content-Type: application/x-www-form-urlencoded
+POST /api/auth/login
+Content-Type: application/json
 
-username=johndoe&password=securepassword
+{
+  "username": "johndoe",
+  "password": "securepassword123"
+}
 ```
 
 Response:
@@ -103,8 +147,18 @@ Response:
 
 #### Get current user
 ```http
-GET /auth/me
+GET /api/auth/me
 Authorization: Bearer <token>
+```
+
+Response:
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "username": "johndoe",
+  "createdAt": "2024-01-01T00:00:00.000Z"
+}
 ```
 
 ### Transactions
@@ -113,7 +167,7 @@ All transaction endpoints require authentication (Bearer token in Authorization 
 
 #### Create a transaction
 ```http
-POST /transactions/
+POST /api/transactions
 Authorization: Bearer <token>
 Content-Type: application/json
 
@@ -122,44 +176,57 @@ Content-Type: application/json
   "amount": 5000.00,
   "description": "Monthly salary",
   "category": "Income",
-  "transaction_type": "income"
+  "transactionType": "income"
+}
+```
+
+Response:
+```json
+{
+  "id": 1,
+  "title": "Salary",
+  "amount": "5000.00",
+  "description": "Monthly salary",
+  "category": "Income",
+  "transactionType": "income",
+  "date": "2024-01-01T00:00:00.000Z",
+  "userId": 1
 }
 ```
 
 #### Get all transactions
 ```http
-GET /transactions/?skip=0&limit=100
+GET /api/transactions?skip=0&limit=100
 Authorization: Bearer <token>
 ```
 
 #### Get a specific transaction
 ```http
-GET /transactions/{transaction_id}
+GET /api/transactions/{id}
 Authorization: Bearer <token>
 ```
 
 #### Update a transaction
 ```http
-PUT /transactions/{transaction_id}
+PATCH /api/transactions/{id}
 Authorization: Bearer <token>
 Content-Type: application/json
 
 {
   "title": "Updated Title",
-  "amount": 150.00,
-  "description": "Updated description"
+  "amount": 150.00
 }
 ```
 
 #### Delete a transaction
 ```http
-DELETE /transactions/{transaction_id}
+DELETE /api/transactions/{id}
 Authorization: Bearer <token>
 ```
 
 #### Get transaction summary
 ```http
-GET /transactions/stats/summary
+GET /api/transactions/stats/summary
 Authorization: Bearer <token>
 ```
 
@@ -177,29 +244,35 @@ Response:
 
 1. Register a user:
 ```bash
-curl -X POST "http://localhost:8000/auth/register" \
+curl -X POST "http://localhost:3000/api/auth/register" \
   -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","username":"johndoe","password":"pass123"}'
+  -d '{"email":"user@example.com","username":"johndoe","password":"pass123456"}'
 ```
 
 2. Login:
 ```bash
-curl -X POST "http://localhost:8000/auth/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=johndoe&password=pass123"
+curl -X POST "http://localhost:3000/api/auth/login" \
+  -H "Content-Type: application/json" \
+  -d '{"username":"johndoe","password":"pass123456"}'
 ```
 
 3. Create a transaction (use token from login response):
 ```bash
-curl -X POST "http://localhost:8000/transactions/" \
+curl -X POST "http://localhost:3000/api/transactions" \
   -H "Authorization: Bearer <your-token-here>" \
   -H "Content-Type: application/json" \
-  -d '{"title":"Groceries","amount":50.00,"transaction_type":"expense","category":"Food"}'
+  -d '{"title":"Groceries","amount":50.00,"transactionType":"expense","category":"Food"}'
 ```
 
 4. Get all transactions:
 ```bash
-curl -X GET "http://localhost:8000/transactions/" \
+curl -X GET "http://localhost:3000/api/transactions" \
+  -H "Authorization: Bearer <your-token-here>"
+```
+
+5. Get transaction summary:
+```bash
+curl -X GET "http://localhost:3000/api/transactions/stats/summary" \
   -H "Authorization: Bearer <your-token-here>"
 ```
 
@@ -207,25 +280,68 @@ curl -X GET "http://localhost:8000/transactions/" \
 
 The application uses SQLite database (`transactions.db`) which is created automatically on first run. The database includes:
 
-- **users** table: Stores user information
-- **transactions** table: Stores transaction records
+- **users** table: Stores user information with hashed passwords
+- **transactions** table: Stores transaction records linked to users
+
+TypeORM is configured with `synchronize: true` for development, which automatically creates/updates tables based on entities. **Set to `false` in production** and use migrations instead.
+
+## Validation
+
+The API uses class-validator decorators for input validation:
+
+- Email format validation
+- Required fields validation
+- Minimum password length (6 characters)
+- Transaction type validation (income/expense only)
+- Type checking for numeric values
 
 ## Security Notes
 
-- The `SECRET_KEY` in `auth.py` should be changed in production
+- Passwords are hashed using bcrypt with 10 salt rounds
+- JWT tokens expire after 30 minutes
+- Change `JWT_SECRET` in production (use a strong, random string)
 - Use environment variables for sensitive configuration
 - HTTPS should be used in production
 - Consider implementing rate limiting
-- Add input sanitization for production use
+- The `password` field is excluded from all user responses
 
 ## Development
 
-To modify the database schema:
-1. Update models in `models.py`
-2. Delete `transactions.db`
-3. Restart the application (tables will be recreated)
+### Linting
+```bash
+npm run lint
+```
 
-For production, consider using database migrations with Alembic.
+### Formatting
+```bash
+npm run format
+```
+
+### Building
+```bash
+npm run build
+```
+
+## Module Architecture
+
+The application follows NestJS modular architecture:
+
+- **AuthModule**: Handles authentication, JWT strategy, and user registration
+- **UsersModule**: Manages user entities and repository
+- **TransactionsModule**: Handles all transaction-related operations
+- **AppModule**: Root module that ties everything together
+
+## Error Handling
+
+The API returns appropriate HTTP status codes:
+
+- `200 OK` - Successful GET/PATCH requests
+- `201 Created` - Successful POST requests
+- `204 No Content` - Successful DELETE requests
+- `400 Bad Request` - Validation errors
+- `401 Unauthorized` - Authentication failures
+- `404 Not Found` - Resource not found
+- `409 Conflict` - Duplicate email/username
 
 ## License
 
